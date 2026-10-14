@@ -30,6 +30,11 @@ class TransactionCreate(BaseModel):
         description="Optional override category. Skips auto-categorization.",
         examples=["Transport"],
     )
+    timestamp: Optional[datetime] = Field(
+        None,
+        description="Optional custom timestamp for backdating. Defaults to now.",
+        examples=["2026-08-15T14:30:00"],
+    )
 
     @field_validator("description")
     @classmethod

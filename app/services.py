@@ -64,7 +64,7 @@ def create_transaction(db: Session, data: TransactionCreate) -> Transaction:
         raise CategoryTypeMismatchError(category, data.transaction_type)
 
     # R4: duplicate detection
-    now = datetime.utcnow()
+    now = data.timestamp if data.timestamp else datetime.utcnow()
     window = timedelta(minutes=settings.duplicate_window_minutes)
     norm_desc = _normalize_description(data.description)
     rounded_amount = round(abs(data.amount), 2)
