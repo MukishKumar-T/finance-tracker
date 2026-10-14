@@ -106,3 +106,11 @@ class SummaryResponse(BaseModel):
     total_expense: float
     net: float
     categories: list[CategorySummary]
+
+
+class PaginatedTransactions(BaseModel):
+    items: list[TransactionResponse]
+    total: int
+    page: int
+    pages: int
+    limit: int

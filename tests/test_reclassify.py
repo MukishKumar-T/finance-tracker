@@ -31,7 +31,7 @@ class TestReclassify:
 
         # Verify via list endpoint
         resp = client.get("/transactions/")
-        matched = next(x for x in resp.json() if x["id"] == t["id"])
+        matched = next(x for x in resp.json()["items"] if x["id"] == t["id"])
         assert matched["auto_tagged"] is False
 
     def test_reclassify_nonexistent_returns_404(self, client):
@@ -75,6 +75,6 @@ class TestReclassify:
 
         # Re-fetch and confirm auto_tagged is still False
         resp = client.get("/transactions/")
-        matched = next(x for x in resp.json() if x["id"] == t["id"])
+        matched = next(x for x in resp.json()["items"] if x["id"] == t["id"])
         assert matched["auto_tagged"] is False
         assert matched["category"] == "Travel"

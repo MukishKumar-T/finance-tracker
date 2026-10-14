@@ -115,14 +115,16 @@ def create_transaction(db: Session, data: TransactionCreate) -> Transaction:
 # List / filter
 # ---------------------------------------------------------------------------
 
-def list_transactions(
+def _build_query(
     db: Session,
     month: Optional[str] = None,
     transaction_type: Optional[str] = None,
     category: Optional[str] = None,
-    skip: int = 0,
-    limit: int = 100,
-) -> list[Transaction]:
+    search: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+):
+    from datetime import date
     q = db.query(Transaction)
 
     if month:
@@ -132,23 +134,102 @@ def list_transactions(
             extract("month", Transaction.timestamp) == mon,
         )
 
+    if date_from:
+        q = q.filter(Transaction.timestamp >= date_from)
+
+    if date_to:
+        # include the full day
+        q = q.filter(Transaction.timestamp <= date_to + " 23:59:59")
+
     if transaction_type:
         q = q.filter(Transaction.transaction_type == transaction_type)
 
     if category:
         q = q.filter(Transaction.category == category)
 
-    transactions = (
-        q.order_by(Transaction.timestamp.desc())
-        .offset(skip)
-        .limit(limit)
-        .all()
-    )
+    if search:
+        q = q.filter(Transaction.description.ilike(f"%{search}%"))
+
+    return q
+
+
+def list_transactions(
+    db: Session,
+    month: Optional[str] = None,
+    transaction_type: Optional[str] = None,
+    category: Optional[str] = None,
+    search: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 100,
+    sort_by: str = "timestamp",
+    sort_dir: str = "desc",
+) -> dict:
+    from app.schemas import PaginatedTransactions
+
+    q = _build_query(db, month, transaction_type, category, search, date_from, date_to)
+
+    total = q.count()
+
+    # Sort
+    from sqlalchemy import func as sqlfunc
+    sort_col = {
+        "timestamp": Transaction.timestamp,
+        "amount": sqlfunc.abs(Transaction.amount),
+        "category": Transaction.category,
+    }.get(sort_by, Transaction.timestamp)
+
+    if sort_dir == "asc":
+        q = q.order_by(sort_col.asc())
+    else:
+        q = q.order_by(sort_col.desc())
+
+    transactions = q.offset(skip).limit(limit).all()
 
     for t in transactions:
         t.amount = _to_absolute(t.amount)
 
-    return transactions
+    pages = max(1, -(-total // limit))  # ceiling division
+    page = (skip // limit) + 1
+
+    return {
+        "items": transactions,
+        "total": total,
+        "page": page,
+        "pages": pages,
+        "limit": limit,
+    }
+
+
+def export_transactions_csv(
+    db: Session,
+    month: Optional[str] = None,
+    transaction_type: Optional[str] = None,
+    category: Optional[str] = None,
+    search: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+) -> str:
+    import csv, io
+
+    q = _build_query(db, month, transaction_type, category, search, date_from, date_to)
+    transactions = q.order_by(Transaction.timestamp.desc()).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["id", "description", "amount", "transaction_type", "category", "auto_tagged", "timestamp"])
+    for t in transactions:
+        writer.writerow([
+            t.id,
+            t.description,
+            round(abs(t.amount), 2),
+            t.transaction_type,
+            t.category or "Uncategorized",
+            t.auto_tagged,
+            t.timestamp.isoformat(),
+        ])
+    return output.getvalue()
 
 
 # ---------------------------------------------------------------------------

@@ -3,12 +3,15 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
+import io
 
 from app.database import get_db
 from app.schemas import (
     TransactionCreate,
     TransactionResponse,
+    PaginatedTransactions,
     ReclassifyRequest,
     SummaryResponse,
 )
@@ -18,6 +21,7 @@ from app.services import (
     delete_transaction,
     reclassify_transaction,
     get_summary,
+    export_transactions_csv,
 )
 from app.exceptions import DuplicateTransactionError, CategoryTypeMismatchError
 
@@ -26,6 +30,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 
 _MONTH_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
+_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 def _validate_month(month: Optional[str]) -> Optional[str]:
@@ -37,8 +42,17 @@ def _validate_month(month: Optional[str]) -> Optional[str]:
     return month
 
 
+def _validate_date(d: Optional[str], name: str) -> Optional[str]:
+    if d and not _DATE_RE.match(d):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"{name} must be in YYYY-MM-DD format",
+        )
+    return d
+
+
 # ---------------------------------------------------------------------------
-# IMPORTANT: /summary must be declared BEFORE /{transaction_id}
+# IMPORTANT: /summary and /export must be declared BEFORE /{transaction_id}
 # ---------------------------------------------------------------------------
 
 @router.get(
@@ -54,6 +68,41 @@ def get_monthly_summary(
 ):
     _validate_month(month)
     return get_summary(db, month)
+
+
+@router.get(
+    "/export",
+    operation_id="export_transactions_csv",
+    summary="Export transactions as CSV",
+    responses={200: {"content": {"text/csv": {}}}},
+)
+def export_csv(
+    month: Optional[str] = Query(None),
+    type: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    search: Optional[str] = Query(None, description="Keyword search on description"),
+    date_from: Optional[str] = Query(None, description="Start date YYYY-MM-DD"),
+    date_to: Optional[str] = Query(None, description="End date YYYY-MM-DD"),
+    db: Session = Depends(get_db),
+):
+    _validate_month(month)
+    _validate_date(date_from, "date_from")
+    _validate_date(date_to, "date_to")
+
+    csv_data = export_transactions_csv(
+        db,
+        month=month,
+        transaction_type=type,
+        category=category,
+        search=search,
+        date_from=date_from,
+        date_to=date_to,
+    )
+    return StreamingResponse(
+        io.StringIO(csv_data),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=transactions.csv"},
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -92,26 +141,57 @@ def create(data: TransactionCreate, db: Session = Depends(get_db)):
 
 @router.get(
     "/",
-    response_model=list[TransactionResponse],
+    response_model=PaginatedTransactions,
     operation_id="list_transactions",
     responses={422: {"description": "Invalid filter value"}},
-    summary="List transactions with optional filters",
+    summary="List transactions with optional filters, search, sort and pagination",
 )
 def list_all(
     month: Optional[str] = Query(None, description="Filter by month (YYYY-MM)"),
     type: Optional[str] = Query(None, description="Filter by type: income or expense"),
     category: Optional[str] = Query(None, description="Filter by category"),
+    search: Optional[str] = Query(None, description="Keyword search on description"),
+    date_from: Optional[str] = Query(None, description="Start date YYYY-MM-DD"),
+    date_to: Optional[str] = Query(None, description="End date YYYY-MM-DD"),
+    sort_by: str = Query("timestamp", description="Sort field: timestamp | amount | category"),
+    sort_dir: str = Query("desc", description="Sort direction: asc | desc"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     db: Session = Depends(get_db),
 ):
     _validate_month(month)
+    _validate_date(date_from, "date_from")
+    _validate_date(date_to, "date_to")
+
     if type and type not in ("income", "expense"):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="type must be 'income' or 'expense'",
         )
-    return list_transactions(db, month=month, transaction_type=type, category=category, skip=skip, limit=limit)
+    if sort_by not in ("timestamp", "amount", "category"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="sort_by must be timestamp, amount, or category",
+        )
+    if sort_dir not in ("asc", "desc"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="sort_dir must be asc or desc",
+        )
+
+    return list_transactions(
+        db,
+        month=month,
+        transaction_type=type,
+        category=category,
+        search=search,
+        date_from=date_from,
+        date_to=date_to,
+        skip=skip,
+        limit=limit,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+    )
 
 
 # ---------------------------------------------------------------------------

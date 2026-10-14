@@ -147,29 +147,55 @@ class TestListTransactions:
         self._seed(client)
         resp = client.get("/transactions/")
         assert resp.status_code == 200
-        assert len(resp.json()) == 3
+        data = resp.json()
+        assert data["total"] == 3
+        assert len(data["items"]) == 3
+
+    def test_pagination_metadata(self, client):
+        self._seed(client)
+        resp = client.get("/transactions/?limit=2")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total"] == 3
+        assert data["pages"] == 2
+        assert data["page"] == 1
+        assert len(data["items"]) == 2
 
     def test_filter_by_type_expense(self, client):
         self._seed(client)
         resp = client.get("/transactions/?type=expense")
         assert resp.status_code == 200
-        results = resp.json()
-        assert all(t["transaction_type"] == "expense" for t in results)
-        assert len(results) == 2
+        items = resp.json()["items"]
+        assert all(t["transaction_type"] == "expense" for t in items)
+        assert len(items) == 2
 
     def test_filter_by_type_income(self, client):
         self._seed(client)
         resp = client.get("/transactions/?type=income")
         assert resp.status_code == 200
-        results = resp.json()
-        assert len(results) == 1
+        assert len(resp.json()["items"]) == 1
 
     def test_filter_by_category(self, client):
         self._seed(client)
         resp = client.get("/transactions/?category=Transport")
         assert resp.status_code == 200
-        results = resp.json()
-        assert all(t["category"] == "Transport" for t in results)
+        items = resp.json()["items"]
+        assert all(t["category"] == "Transport" for t in items)
+
+    def test_search_by_keyword(self, client):
+        self._seed(client)
+        resp = client.get("/transactions/?search=uber")
+        assert resp.status_code == 200
+        items = resp.json()["items"]
+        assert len(items) == 1
+        assert "Uber" in items[0]["description"]
+
+    def test_sort_by_amount_asc(self, client):
+        self._seed(client)
+        resp = client.get("/transactions/?sort_by=amount&sort_dir=asc")
+        assert resp.status_code == 200
+        amounts = [t["amount"] for t in resp.json()["items"]]
+        assert amounts == sorted(amounts)
 
     def test_invalid_type_filter_422(self, client):
         resp = client.get("/transactions/?type=unknown")
@@ -179,14 +205,23 @@ class TestListTransactions:
         self._seed(client)
         resp = client.get("/transactions/?skip=1&limit=1")
         assert resp.status_code == 200
-        assert len(resp.json()) == 1
+        assert len(resp.json()["items"]) == 1
 
     def test_amounts_are_absolute(self, client):
         self._seed(client)
         resp = client.get("/transactions/")
         assert resp.status_code == 200
-        for t in resp.json():
+        for t in resp.json()["items"]:
             assert t["amount"] > 0
+
+    def test_export_csv(self, client):
+        self._seed(client)
+        resp = client.get("/transactions/export")
+        assert resp.status_code == 200
+        assert "text/csv" in resp.headers["content-type"]
+        lines = resp.text.strip().split("\n")
+        assert lines[0].startswith("id,description")
+        assert len(lines) == 4  # header + 3 rows
 
 
 class TestDeleteTransaction:
