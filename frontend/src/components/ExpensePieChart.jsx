@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { getSummary } from '../api/client'
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import MonthDropdown from './MonthDropdown'
 
 const COLORS = ['#4f8ef7', '#f6ad55', '#68d391', '#fc8181', '#76e4f7', '#b794f4', '#fbd38d', '#9ae6b4', '#f687b3']
 
@@ -31,7 +32,7 @@ export default function ExpensePieChart({ refreshKey }) {
     <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '10px', boxShadow: '0 1px 4px rgba(0,0,0,.1)', marginBottom: '1.5rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
         <h2>Expense Breakdown</h2>
-        <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
+        <MonthDropdown value={month} onChange={(v) => setMonth(v || '')} />
       </div>
       {loading && <p>Loading…</p>}
       {!loading && chartData.length === 0 && <p style={{ color: '#888' }}>No expense data.</p>}

@@ -1,4 +1,4 @@
-# Personal Finance Tracker
+# XpenseSlate
 
 Records income and expenses, auto-categorizes transactions from their description, detects duplicates within a configurable time window, and reports monthly summaries per category.
 

@@ -13,7 +13,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="Personal Finance Tracker",
+    title="XpenseSlate",
     description="Records income and expenses, auto-categorizes, detects duplicates, and summarizes.",
     version="1.0.0",
 )

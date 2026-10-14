@@ -54,7 +54,7 @@ export default function App() {
   return (
     <>
       <header style={S.header}>
-        <h1 style={{ fontSize: '1.3rem' }}>💰 Personal Finance Tracker</h1>
+        <h1 style={{ fontSize: '1.3rem' }}>💰 XpenseSlate</h1>
       </header>
       <main style={S.main}>
         <div style={S.tabs}>
