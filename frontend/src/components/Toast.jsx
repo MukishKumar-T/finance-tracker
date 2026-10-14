@@ -1,21 +1,9 @@
 import { useEffect } from 'react'
 
-const STYLES = {
-  wrap: (type) => ({
-    position: 'fixed',
-    bottom: '1.5rem',
-    right: '1.5rem',
-    background: type === 'error' ? '#c53030' : type === 'success' ? '#276749' : '#2b6cb0',
-    color: '#fff',
-    padding: '0.75rem 1.25rem',
-    borderRadius: '8px',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-    fontSize: '0.9rem',
-    fontWeight: 500,
-    zIndex: 9999,
-    maxWidth: 360,
-    animation: 'slideIn 0.2s ease',
-  }),
+const COLORS = {
+  success: { bg: '#14532d', border: '#4ade80', icon: '✓' },
+  error:   { bg: '#7f1d1d', border: '#f87171', icon: '✕' },
+  info:    { bg: '#1e3a5f', border: '#60a5fa', icon: 'ℹ' },
 }
 
 export default function Toast({ message, type = 'success', onClose }) {
@@ -27,11 +15,26 @@ export default function Toast({ message, type = 'success', onClose }) {
 
   if (!message) return null
 
+  const c = COLORS[type] || COLORS.info
+
   return (
     <>
-      <style>{`@keyframes slideIn { from { transform: translateY(20px); opacity:0 } to { transform: translateY(0); opacity:1 } }`}</style>
-      <div style={STYLES.wrap(type)} role="alert">
-        {type === 'success' ? '✓ ' : type === 'error' ? '✕ ' : 'ℹ '}{message}
+      <style>{`@keyframes slideUp { from { transform:translateY(16px); opacity:0 } to { transform:translateY(0); opacity:1 } }`}</style>
+      <div
+        role="alert"
+        style={{
+          position: 'fixed', bottom: '1.5rem', right: '1.5rem',
+          background: c.bg, border: `1px solid ${c.border}`,
+          color: '#f0f0f0', padding: '0.75rem 1.25rem',
+          borderRadius: 9, boxShadow: '0 4px 20px rgba(0,0,0,.5)',
+          fontSize: '0.875rem', fontWeight: 500, zIndex: 9999,
+          maxWidth: 360, display: 'flex', alignItems: 'center', gap: 10,
+          animation: 'slideUp 0.2s ease',
+          fontFamily: "'Inter', sans-serif",
+        }}
+      >
+        <span style={{ color: c.border, fontWeight: 700, fontSize: '1rem' }}>{c.icon}</span>
+        {message}
       </div>
     </>
   )

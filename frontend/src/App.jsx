@@ -9,19 +9,68 @@ import Toast from './components/Toast'
 import useToast from './components/useToast'
 import { listTransactions } from './api/client'
 
-const S = {
-  header: { background: '#1a1a2e', color: '#fff', padding: '1rem 2rem', marginBottom: '1.5rem' },
-  main: { maxWidth: 1200, margin: '0 auto', padding: '0 1.5rem' },
-  card: { background: '#fff', padding: '1.5rem', borderRadius: '10px', boxShadow: '0 1px 4px rgba(0,0,0,.1)', marginBottom: '1.5rem' },
-  tabs: { display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' },
-  tab: (active) => ({
-    padding: '8px 18px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: 600,
-    background: active ? '#4f8ef7' : '#e2e8f0',
-    color: active ? '#fff' : '#333',
-  }),
-}
-
 const TABS = ['Transactions', 'Summary', 'Charts']
+
+const S = {
+  header: {
+    background: '#111',
+    borderBottom: '1px solid #2a2a2a',
+    padding: '0 2rem',
+    height: 60,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    position: 'sticky',
+    top: 0,
+    zIndex: 100,
+  },
+  logo: {
+    fontFamily: "'Space Grotesk', sans-serif",
+    fontWeight: 700,
+    fontSize: '1.35rem',
+    color: '#f5c518',
+    letterSpacing: '-0.5px',
+  },
+  logoX: { color: '#f0f0f0' },
+  main: { maxWidth: 1200, margin: '0 auto', padding: '2rem 1.5rem' },
+  tabs: {
+    display: 'flex',
+    gap: '0.25rem',
+    marginBottom: '2rem',
+    background: '#161616',
+    borderRadius: 10,
+    padding: '4px',
+    width: 'fit-content',
+    border: '1px solid #2a2a2a',
+  },
+  tab: (active) => ({
+    padding: '8px 22px',
+    borderRadius: 7,
+    border: 'none',
+    cursor: 'pointer',
+    fontWeight: 600,
+    fontSize: '0.875rem',
+    fontFamily: "'Inter', sans-serif",
+    background: active ? '#f5c518' : 'transparent',
+    color: active ? '#0d0d0d' : '#888',
+    transition: 'all .18s',
+  }),
+  card: {
+    background: '#161616',
+    border: '1px solid #2a2a2a',
+    borderRadius: 12,
+    padding: '1.5rem',
+    marginBottom: '1.5rem',
+    boxShadow: '0 2px 12px rgba(0,0,0,.5)',
+  },
+  cardTitle: {
+    fontFamily: "'Space Grotesk', sans-serif",
+    fontSize: '1.05rem',
+    fontWeight: 700,
+    color: '#f0f0f0',
+    marginBottom: '1rem',
+  },
+}
 
 export default function App() {
   const [tab, setTab] = useState('Transactions')
@@ -32,10 +81,7 @@ export default function App() {
   const { toast, showToast, clearToast } = useToast()
 
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), [])
-
-  const handleFiltersChange = useCallback((f) => {
-    setFilters(f)
-  }, [])
+  const handleFiltersChange = useCallback((f) => setFilters(f), [])
 
   useEffect(() => {
     setLoading(true)
@@ -45,7 +91,6 @@ export default function App() {
       .finally(() => setLoading(false))
   }, [filters, refreshKey])
 
-  // Poll every 20 seconds
   useEffect(() => {
     const id = setInterval(refresh, 20000)
     return () => clearInterval(id)
@@ -54,8 +99,12 @@ export default function App() {
   return (
     <>
       <header style={S.header}>
-        <h1 style={{ fontSize: '1.3rem' }}>💰 XpenseSlate</h1>
+        <span style={S.logo}>
+          <span style={S.logoX}>X</span>penseSlate
+        </span>
+        <span style={{ fontSize: '0.75rem', color: '#555' }}>Personal Finance Tracker</span>
       </header>
+
       <main style={S.main}>
         <div style={S.tabs}>
           {TABS.map((t) => (
@@ -67,7 +116,7 @@ export default function App() {
           <>
             <TransactionForm onCreated={refresh} showToast={showToast} />
             <div style={S.card}>
-              <h2 style={{ marginBottom: '1rem' }}>Transactions</h2>
+              <div style={S.cardTitle}>Transactions</div>
               <Filters filters={filters} onChange={handleFiltersChange} />
               <TransactionList
                 data={data}

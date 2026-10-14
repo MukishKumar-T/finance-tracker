@@ -3,7 +3,23 @@ import { getSummary } from '../api/client'
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import MonthDropdown from './MonthDropdown'
 
-const COLORS = ['#4f8ef7', '#f6ad55', '#68d391', '#fc8181', '#76e4f7', '#b794f4', '#fbd38d', '#9ae6b4', '#f687b3']
+const COLORS = ['#f5c518', '#4ade80', '#f87171', '#60a5fa', '#c084fc', '#fb923c', '#34d399', '#f472b6', '#a3e635']
+
+const cardStyle = {
+  background: '#161616', border: '1px solid #2a2a2a',
+  borderRadius: 12, padding: '1.5rem',
+  marginBottom: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,.5)',
+}
+
+const CustomTooltip = ({ active, payload }) => {
+  if (!active || !payload?.length) return null
+  return (
+    <div style={{ background: '#1e1e1e', border: '1px solid #2a2a2a', borderRadius: 8, padding: '10px 14px', fontSize: '0.82rem' }}>
+      <div style={{ color: payload[0].payload.fill, fontWeight: 700 }}>{payload[0].name}</div>
+      <div style={{ color: '#f0f0f0', marginTop: 3 }}>₹{payload[0].value.toLocaleString()}</div>
+    </div>
+  )
+}
 
 export default function ExpensePieChart({ refreshKey }) {
   const [month, setMonth] = useState('')
@@ -29,21 +45,25 @@ export default function ExpensePieChart({ refreshKey }) {
   }, [month, refreshKey])
 
   return (
-    <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '10px', boxShadow: '0 1px 4px rgba(0,0,0,.1)', marginBottom: '1.5rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-        <h2>Expense Breakdown</h2>
+    <div style={cardStyle}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+        <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: '1.05rem', fontWeight: 700, color: '#f0f0f0' }}>
+          Expense Breakdown
+        </span>
         <MonthDropdown value={month} onChange={(v) => setMonth(v || '')} />
       </div>
-      {loading && <p>Loading…</p>}
-      {!loading && chartData.length === 0 && <p style={{ color: '#888' }}>No expense data.</p>}
+      {loading && <p style={{ color: '#555', fontSize: '0.9rem' }}>Loading…</p>}
+      {!loading && chartData.length === 0 && <p style={{ color: '#555', fontSize: '0.9rem' }}>No expense data.</p>}
       {!loading && chartData.length > 0 && (
         <ResponsiveContainer width="100%" height={300}>
           <PieChart>
-            <Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
-              {chartData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+            <Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110} innerRadius={55} paddingAngle={3}>
+              {chartData.map((entry, i) => (
+                <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="transparent" />
+              ))}
             </Pie>
-            <Tooltip formatter={(v) => `₹${v.toLocaleString()}`} />
-            <Legend />
+            <Tooltip content={<CustomTooltip />} />
+            <Legend wrapperStyle={{ color: '#888', fontSize: '0.8rem' }} />
           </PieChart>
         </ResponsiveContainer>
       )}

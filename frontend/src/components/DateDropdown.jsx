@@ -1,60 +1,77 @@
 /**
- * DateDropdown — renders three selects (Day / Month / Year) and emits a
- * YYYY-MM-DD string (or undefined when cleared) via onChange.
+ * DateDropdown — Day / Month / Year selects.
+ * Calls onChange(YYYY-MM-DD) only when all three are filled.
+ * Shows current partial selections in the dropdowns always.
+ * Calls onChange(undefined) when all are cleared.
  */
 
 const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
+  'January','February','March','April','May','June',
+  'July','August','September','October','November','December',
 ]
-
 const CURRENT_YEAR = new Date().getFullYear()
 const YEARS = Array.from({ length: 10 }, (_, i) => CURRENT_YEAR - i)
-const DAYS = Array.from({ length: 31 }, (_, i) => i + 1)
+const DAYS  = Array.from({ length: 31 }, (_, i) => i + 1)
 
-const S = {
-  wrap: { display: 'flex', gap: '4px', alignItems: 'center' },
-  select: { padding: '6px 6px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '0.8rem' },
+const sel = {
+  background: '#161616', border: '1px solid #2a2a2a',
+  borderRadius: 6, padding: '7px 6px',
+  fontSize: '0.8rem', color: '#f0f0f0',
+  outline: 'none', cursor: 'pointer',
 }
 
 function pad(n) { return String(n).padStart(2, '0') }
 
-function parseDate(iso) {
+function parse(iso) {
   if (!iso) return { day: '', month: '', year: '' }
   const [y, m, d] = iso.split('-')
   return { day: String(parseInt(d, 10)), month: String(parseInt(m, 10)), year: y }
 }
 
-function toISO(day, month, year) {
-  if (!day || !month || !year) return undefined
-  return `${year}-${pad(month)}-${pad(day)}`
-}
+import { useState, useEffect } from 'react'
 
 export default function DateDropdown({ value, onChange, label }) {
-  const { day, month, year } = parseDate(value)
+  // Keep local partial state so user can fill fields in any order
+  const parsed = parse(value)
+  const [local, setLocal] = useState(parsed)
+
+  // Sync if parent clears the value (e.g. "Clear filters" button)
+  useEffect(() => {
+    if (!value) setLocal({ day: '', month: '', year: '' })
+  }, [value])
 
   const handle = (field) => (e) => {
-    const updated = {
-      day: field === 'day' ? e.target.value : day,
-      month: field === 'month' ? e.target.value : month,
-      year: field === 'year' ? e.target.value : year,
+    const updated = { ...local, [field]: e.target.value }
+    setLocal(updated)
+
+    const { day, month, year } = updated
+    if (day && month && year) {
+      // All three filled — emit ISO date
+      onChange(`${year}-${pad(month)}-${pad(day)}`)
+    } else if (!day && !month && !year) {
+      // All cleared
+      onChange(undefined)
     }
-    onChange(toISO(updated.day, updated.month, updated.year))
+    // Partial — don't call onChange yet; keep waiting for the rest
   }
 
   return (
     <div>
-      {label && <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#555', marginBottom: 4 }}>{label}</div>}
-      <div style={S.wrap}>
-        <select style={S.select} value={day} onChange={handle('day')}>
+      {label && (
+        <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#888', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          {label}
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 4 }}>
+        <select style={sel} value={local.day} onChange={handle('day')}>
           <option value="">DD</option>
           {DAYS.map((d) => <option key={d} value={d}>{pad(d)}</option>)}
         </select>
-        <select style={S.select} value={month} onChange={handle('month')}>
-          <option value="">MM</option>
-          {MONTHS.map((m, i) => <option key={i + 1} value={i + 1}>{m.slice(0, 3)}</option>)}
+        <select style={sel} value={local.month} onChange={handle('month')}>
+          <option value="">MMM</option>
+          {MONTHS.map((m, i) => <option key={i+1} value={i+1}>{m.slice(0,3)}</option>)}
         </select>
-        <select style={S.select} value={year} onChange={handle('year')}>
+        <select style={sel} value={local.year} onChange={handle('year')}>
           <option value="">YYYY</option>
           {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
         </select>

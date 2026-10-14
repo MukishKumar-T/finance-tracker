@@ -1,18 +1,15 @@
-/**
- * MonthDropdown — Month + Year selects, emits a YYYY-MM string (or undefined).
- */
-
 const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
+  'January','February','March','April','May','June',
+  'July','August','September','October','November','December',
 ]
-
 const CURRENT_YEAR = new Date().getFullYear()
 const YEARS = Array.from({ length: 10 }, (_, i) => CURRENT_YEAR - i)
 
-const S = {
-  wrap: { display: 'flex', gap: '4px', alignItems: 'center' },
-  select: { padding: '6px 6px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '0.8rem' },
+const sel = {
+  background: '#161616', border: '1px solid #2a2a2a',
+  borderRadius: 6, padding: '7px 6px',
+  fontSize: '0.8rem', color: '#f0f0f0',
+  outline: 'none', cursor: 'pointer',
 }
 
 function pad(n) { return String(n).padStart(2, '0') }
@@ -32,32 +29,21 @@ export default function MonthDropdown({ value, onChange, label }) {
   const { month, year } = parse(value)
 
   const handle = (field) => (e) => {
-    const updated = {
-      month: field === 'month' ? e.target.value : month,
-      year:  field === 'year'  ? e.target.value : year,
-    }
-    onChange(toYearMonth(updated.month, updated.year))
+    const u = { month, year, [field]: e.target.value }
+    onChange(toYearMonth(u.month, u.year))
   }
 
   return (
     <div>
-      {label && (
-        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#555', marginBottom: 4 }}>
-          {label}
-        </div>
-      )}
-      <div style={S.wrap}>
-        <select style={S.select} value={month} onChange={handle('month')}>
+      {label && <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#888', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>}
+      <div style={{ display: 'flex', gap: 4 }}>
+        <select style={sel} value={month} onChange={handle('month')}>
           <option value="">Month</option>
-          {MONTHS.map((m, i) => (
-            <option key={i + 1} value={i + 1}>{m.slice(0, 3)}</option>
-          ))}
+          {MONTHS.map((m, i) => <option key={i+1} value={i+1}>{m.slice(0,3)}</option>)}
         </select>
-        <select style={S.select} value={year} onChange={handle('year')}>
+        <select style={sel} value={year} onChange={handle('year')}>
           <option value="">Year</option>
-          {YEARS.map((y) => (
-            <option key={y} value={y}>{y}</option>
-          ))}
+          {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
         </select>
       </div>
     </div>
