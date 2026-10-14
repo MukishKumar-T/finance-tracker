@@ -31,7 +31,7 @@ Records income and expenses, auto-categorizes transactions from their descriptio
 ## Setup
 
 ```bat
-setupdev.bat
+.\setupdev.bat
 ```
 
 This script:
@@ -59,7 +59,7 @@ cd ..
 ## Running the Application
 
 ```bat
-runapplication.bat
+.\runapplication.bat
 ```
 
 Two terminal windows open:
