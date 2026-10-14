@@ -2,7 +2,7 @@
 setlocal
 
 echo ============================================================
-echo  Personal Finance Tracker - Dev Setup
+echo  XpenseSlate - Dev Setup
 echo ============================================================
 
 :: 1. Create virtual environment
