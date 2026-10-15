@@ -53,7 +53,7 @@ const S = {
 const EMPTY = { description: '', amount: '', transaction_type: 'expense', category: '' }
 const NOW   = new Date()
 
-export default function TransactionForm({ onCreated, showToast }) {
+export default function TransactionForm({ onCreated, showToast, compact = false }) {
   const [form, setForm]       = useState(EMPTY)
   const [loading, setLoading] = useState(false)
   const [backdate, setBackdate] = useState(false)
@@ -110,9 +110,13 @@ export default function TransactionForm({ onCreated, showToast }) {
   const hours   = Array.from({ length: 24 }, (_, i) => i)
   const minutes = Array.from({ length: 60 }, (_, i) => i)
 
+  const wrapper = compact
+    ? { padding: 0 }
+    : S.card
+
   return (
-    <div style={S.card}>
-      <div style={S.title}>Add Transaction</div>
+    <div style={wrapper}>
+      {!compact && <div style={S.title}>Add Transaction</div>}
       <form onSubmit={handleSubmit}>
         {/* Main fields */}
         <div style={S.row}>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import Dashboard from './components/Dashboard'
 import TransactionForm from './components/TransactionForm'
 import TransactionList from './components/TransactionList'
 import Filters from './components/Filters'
@@ -7,9 +8,10 @@ import ExpensePieChart from './components/ExpensePieChart'
 import MonthlyBarChart from './components/MonthlyBarChart'
 import Toast from './components/Toast'
 import useToast from './components/useToast'
+import AddTransactionModal from './components/AddTransactionModal'
 import { listTransactions } from './api/client'
 
-const TABS = ['Transactions', 'Summary', 'Charts']
+const TABS = ['Dashboard', 'Transactions', 'Summary', 'Charts']
 
 const S = {
   header: {
@@ -36,7 +38,6 @@ const S = {
   tabs: {
     display: 'flex',
     gap: '0.25rem',
-    marginBottom: '2rem',
     background: '#161616',
     borderRadius: 10,
     padding: '4px',
@@ -73,24 +74,30 @@ const S = {
 }
 
 export default function App() {
-  const [tab, setTab] = useState('Transactions')
+  const [tab, setTab] = useState('Dashboard')
   const [filters, setFilters] = useState({})
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [modalOpen, setModalOpen] = useState(false)
   const { toast, showToast, clearToast } = useToast()
 
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), [])
   const handleFiltersChange = useCallback((f) => setFilters(f), [])
 
+  // Navigate to a tab from Dashboard quick-links
+  const handleNavigate = useCallback((targetTab) => setTab(targetTab), [])
+
   useEffect(() => {
+    if (tab !== 'Transactions') return
     setLoading(true)
     listTransactions(filters)
       .then(setData)
       .catch((err) => showToast(err.message || 'Failed to load transactions.', 'error'))
       .finally(() => setLoading(false))
-  }, [filters, refreshKey])
+  }, [filters, refreshKey, tab])
 
+  // Poll every 20 seconds
   useEffect(() => {
     const id = setInterval(refresh, 20000)
     return () => clearInterval(id)
@@ -99,19 +106,43 @@ export default function App() {
   return (
     <>
       <header style={S.header}>
-        <span style={S.logo}>
+        <span style={S.logo} onClick={() => setTab('Dashboard')} role="button" title="Go to Dashboard">
           <span style={S.logoX}>X</span>penseSlate
         </span>
         <span style={{ fontSize: '0.75rem', color: '#555' }}>Personal Finance Tracker</span>
       </header>
 
       <main style={S.main}>
-        <div style={S.tabs}>
-          {TABS.map((t) => (
-            <button key={t} style={S.tab(tab === t)} onClick={() => setTab(t)}>{t}</button>
-          ))}
+        {/* Tab bar + Add button */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <div style={S.tabs}>
+            {TABS.map((t) => (
+              <button key={t} style={S.tab(tab === t)} onClick={() => setTab(t)}>{t}</button>
+            ))}
+          </div>
+          <button
+            onClick={() => setModalOpen(true)}
+            style={{
+              background: '#f5c518', color: '#0d0d0d',
+              border: 'none', borderRadius: 8,
+              padding: '9px 20px', fontWeight: 700,
+              fontSize: '0.9rem', fontFamily: "'Inter', sans-serif",
+              display: 'flex', alignItems: 'center', gap: 6,
+              boxShadow: '0 0 16px rgba(245,197,24,.25)',
+              cursor: 'pointer',
+              transition: 'box-shadow .2s',
+            }}
+          >
+            <span style={{ fontSize: '1rem', lineHeight: 1 }}>＋</span> Add Transaction
+          </button>
         </div>
 
+        {/* Dashboard */}
+        {tab === 'Dashboard' && (
+          <Dashboard onNavigate={handleNavigate} refreshKey={refreshKey} />
+        )}
+
+        {/* Transactions */}
         {tab === 'Transactions' && (
           <>
             <TransactionForm onCreated={refresh} showToast={showToast} />
@@ -130,8 +161,10 @@ export default function App() {
           </>
         )}
 
+        {/* Summary */}
         {tab === 'Summary' && <MonthlySummary refreshKey={refreshKey} />}
 
+        {/* Charts */}
         {tab === 'Charts' && (
           <>
             <MonthlyBarChart refreshKey={refreshKey} />
@@ -141,6 +174,13 @@ export default function App() {
       </main>
 
       <Toast message={toast.message} type={toast.type} onClose={clearToast} />
+
+      <AddTransactionModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onCreated={refresh}
+        showToast={showToast}
+      />
     </>
   )
 }
